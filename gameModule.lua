@@ -1,3 +1,5 @@
+gameModule={}
+
 --[[数据&初始化]]--
 -- 方块：读取数据
 require("blockData")
@@ -9,13 +11,11 @@ local kickWallTableMap=blockData.kickWallTableMap
 local initPos=blockData.initPos
 local blockColor=blockData.blockColor
 math.randomseed(os.time())
-
 -- 场地：40 格高，但是有效区域为 20 格，field 从底下往上
 local field= {}
 for i=1,40 do 
 	field[i]={0,0,0,0,0,0,0,0,0,0}
 end
-
 
 -- 当前：方块的基本参数(位置朝向形状颜色)
 local curBlockId = math.random(7)
@@ -29,13 +29,14 @@ local blockSize = #curBlockShp
 local isGrounded=false
 local islocked=false
 
+-- 初始化计时
+local tm=0
 -- 锁延：开始时间
 local lagStart=love.timer.getTime()
 -- 锁延：操作计数
 local moveCount=15
 
-
-
+--[[函数]]--
 -- 修改当前方块参数
 local function changeCurBlock(id,dir,pos)
 	-- 修改方块的类型方向与位置
@@ -51,7 +52,7 @@ local function changeCurBlock(id,dir,pos)
 end
 
 -- 生成新方块 
-local function regenerateBlock()
+local function respawnBlock()
 	newId=math.random(7)
 	changeCurBlock(newId,1,{initPos[newId][1],initPos[newId][2]})
 	isGrounded = false
@@ -147,11 +148,12 @@ local function kickWall(newDir)
 	return false
 end
 
--- 重置锁延
+-- 因操作造成的重置锁延
 local function resetLockLag()
 	if isGrounded then
 		if moveCount>0 then
 			lagStart=love.timer.getTime()
+			-- 计数减少
 			moveCount=moveCount-1
 			print(moveCount)
 		end
@@ -191,11 +193,133 @@ local function eraseLines()
 end
 
 -- 方块左移
+function moveLeft()
+	if not ifOverlap(curBlockId,curBlockDir,coorX-1,coorY)then
+		resetLockLag()
 
+		-- 移动
+		coorX=coorX-1
+		isGrounded=ifOnGround()
+	end	
+end
 -- 方块右移
-
--- 方块左旋
-
--- 方块右旋
-
+function moveRight()
+	if not ifOverlap(curBlockId,curBlockDir,coorX+1,coorY)then
+		resetLockLag()
+		-- 移动						
+		coorX=coorX+1
+		isGrounded=ifOnGround()					
+	end
+end
+-- 方块左旋逆时针
+function rotateLCCW()
+	local newDir = (curBlockDir-1 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end
+end
+-- 方块右旋顺时针
+function rotateRCW()
+	local newDir = (curBlockDir+1 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end
+end
 -- 方块180度旋转
+function rotate180()
+	local newDir = (curBlockDir+2 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end		
+end
+-- 方块软降
+function softDrop()
+	repeat drop()until isGrounded==true
+	resetLockLag()
+end
+-- 方块硬降
+function hardDrop()
+	repeat drop()until isGrounded==true
+	islocked =true
+end
+
+-- 方块按时间下降
+function dropByTimer()
+	--刷新下落计时器，每0.6秒执行一次drop
+	if love.timer.getTime()-tm>.6 then
+		drop()
+		tm=love.timer.getTime()
+	end
+end
+-- 方块锁定完成消行与重新生成
+function lockEraseRespawn()
+	if isGrounded==true and love.timer.getTime()-lagStart>1 or islocked then
+		lockBlock()
+		eraseLines()
+		respawnBlock()
+	end
+end
+
+-- 获取场地数据
+function getField()
+	return field
+end
+-- 获取当前方块形状
+function getCurBlockShp()
+	return curBlockShp
+end
+-- 获取当前方块颜色
+function getCurBlockColor()
+	return curBlockColor
+end
+-- 获取当前方块位置
+function getCurPos()
+	return {coorX,coorY}
+end
+
+
+--[[
+整合模块
+	blockColor：			颜色对应表
+	----
+	moveLeft()：			当前方块向左移动
+	moveRight()：			当前方块向右移动
+	rotateLCCW()：			当前方块左旋
+	rotateRCW()：			当前方块右旋
+	rotate180()：			当前方块180旋
+	softDrop()：			当前方块软降
+	hardDrop()：			当前方块硬降
+	--
+	dropByTimer():			方块按时间下降
+	lockEraseRespawn():		方块锁定完成消行与重新生成
+	--
+	getField：				获取场地数据
+	getCurBlockShp：		获取当前方块形状
+	getCurBlockColor：		获取当前方块颜色
+	getCurPos：				获取当前方块位置
+	
+]]--
+
+gameModule.blockColor=blockColor
+----
+gameModule.moveLeft=moveLeft
+gameModule.moveRight=moveRight
+gameModule.rotateLCCW=rotateLCCW
+gameModule.rotateRCW=rotateRCW
+gameModule.rotate180=rotate180
+gameModule.softDrop=softDrop
+gameModule.hardDrop=hardDrop
+--
+gameModule.dropByTimer=dropByTimer
+gameModule.lockEraseRespawn=lockEraseRespawn
+--
+gameModule.getField=getField
+gameModule.getCurBlockShp=getCurBlockShp
+gameModule.getCurBlockColor=getCurBlockColor
+gameModule.getCurPos=getCurPos
+
+
+return gameModule
