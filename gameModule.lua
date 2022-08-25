@@ -1,16 +1,14 @@
---[[数据&初始化]]--，
+--[[数据&初始化]]--
+-- 方块：读取数据
 require("blockData")
-
 local blocks=blockData.blocks
 local blockRowsFlag=blockData.blockRowsFlag
 local blockColsFlag=blockData.blockColsFlag
-
 local kickWallTable=blockData.kickWallTable
 local kickWallTableMap=blockData.kickWallTableMap
-
 local initPos=blockData.initPos
 local blockColor=blockData.blockColor
-
+math.randomseed(os.time())
 
 -- 场地：40 格高，但是有效区域为 20 格，field 从底下往上
 local field= {}
@@ -19,27 +17,26 @@ for i=1,40 do
 end
 
 
--- 当前的方块的参数(位置形状颜色)
-math.randomseed(os.time())
+-- 当前：方块的基本参数(位置朝向形状颜色)
 local curBlockId = math.random(7)
 local curBlockDir = 1;
-
 local curBlockColor = blockColor[curBlockId]
 local curBlockShp = blocks[curBlockId][curBlockDir]
 local curblockRowsFlag,curblockColsFlag = blockRowsFlag[curBlockId][curBlockDir],blockColsFlag[curBlockId][curBlockDir]
 local coorX ,coorY = initPos[curBlockId][1],initPos[curBlockId][2] 
 local blockSize = #curBlockShp
--- 当前的方块的状态参数(是否在地面、是否锁定)
+-- 当前：方块的状态参数(是否在地面、是否锁定)
 local isGrounded=false
 local islocked=false
--- 锁延开始时间
+
+-- 锁延：开始时间
 local lagStart=love.timer.getTime()
--- 锁延操作计数
+-- 锁延：操作计数
 local moveCount=15
 
 
 
--- 修改当前方块参数的函数
+-- 修改当前方块参数
 local function changeCurBlock(id,dir,pos)
 	-- 修改方块的类型方向与位置
 	curBlockId=id
@@ -104,12 +101,12 @@ local function ifOverlap(id,dir,x,y)
 	return false
 end
 
--- 检测方块是否落地的函数
+-- 检测方块是否落地
 local function ifOnGround()
 	return ifOverlap(curBlockId,curBlockDir,coorX,coorY-1)
 end
 
---下落函数
+--方块下落
 local function drop()
 	isGrounded=ifOnGround()
 	if isGrounded==false then
@@ -192,3 +189,13 @@ local function eraseLines()
 		end
 	end
 end
+
+-- 方块左移
+
+-- 方块右移
+
+-- 方块左旋
+
+-- 方块右旋
+
+-- 方块180度旋转
