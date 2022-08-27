@@ -303,7 +303,10 @@ end
 function getCurPos()
 	return {coorX,coorY}
 end
-
+-- 获取 Hold 的方块类型
+function getHoldType()
+	return holdType	
+end
 
 --[[
 整合模块
@@ -325,6 +328,8 @@ end
 	getCurBlockShp：		获取当前方块形状
 	getCurBlockColor：		获取当前方块颜色
 	getCurPos：				获取当前方块位置
+	getHoldType				获取 Hold 的方块类型
+
 	
 ]]--
 
@@ -346,6 +351,6 @@ gameModule.getField=getField
 gameModule.getCurBlockShp=getCurBlockShp
 gameModule.getCurBlockColor=getCurBlockColor
 gameModule.getCurPos=getCurPos
-
+gameModule.getHoldType=getHoldType
 
 return gameModule

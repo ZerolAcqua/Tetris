@@ -1,7 +1,7 @@
 function love.conf(t)
 	local W=t.window
 	W.title="俄罗斯方块"
-	W.width,W.height=400,800
+	W.width,W.height=600,800
 	W.resizable=false
 
 	local M=t.modules

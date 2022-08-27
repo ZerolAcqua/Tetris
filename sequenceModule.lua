@@ -49,12 +49,13 @@ end
 
 --[[
 整合模块
+    nextNum：               预览数目
 	----
 	updateSequence()：		进行绘制
     popFront()：            获取序列队首
     getSequence()：         获取序列
 ]]--
-
+sequenceModule.nextNum=nextNum
 ----
 sequenceModule.updateSequence=updateSequence
 sequenceModule.popFront=popFront
