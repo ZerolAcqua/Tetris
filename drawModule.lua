@@ -1,11 +1,17 @@
 drawModule={}
 
+--[[数据&初始化]]--
+-- 读取方块数据
 require("blockData")
 local blockColor=blockData.blockColor
+-- 读取游戏运行数据
+require("gameModule")
+
+--[[函数]]--
 
 
 --绘制场地
-function drawField(field)
+local function drawField(field)
     love.graphics.clear(1,1,1)
     for y=1,20 do for x=1,10 do if field[y][x]>0 then
         local tempColor=blockColor[field[y][x]]
@@ -14,8 +20,8 @@ function drawField(field)
     end end end
 end
 
---绘制方块
-function drawBlock(curBlockShp,pos,curBlockColor)
+-- 绘制方块
+local function drawBlock(curBlockShp,pos,curBlockColor)
     local coorX,coorY=pos[1],pos[2]
     local blockSize=#curBlockShp
 
@@ -25,14 +31,19 @@ function drawBlock(curBlockShp,pos,curBlockColor)
     end end end
 end
 
+-- 绘制全部
+function drawAll()
+    drawField(gameModule.getField())
+    drawBlock(gameModule.getCurBlockShp(),gameModule.getCurPos(),gameModule.getCurBlockColor())
+    love.graphics.present()	-- 输出到屏幕
+end
+
 --[[
 整合模块
 	----
-	drawField()：			绘制场地
-	drawBlock()：			绘制方块
+	drawAll()：			    进行绘制
 ]]--
 
-drawModule.drawField=drawField
-drawModule.drawBlock=drawBlock
+drawModule.drawAll=drawAll
 
 return drawModule

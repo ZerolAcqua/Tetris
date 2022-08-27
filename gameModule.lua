@@ -1,8 +1,9 @@
 gameModule={}
 
 --[[数据&初始化]]--
--- 方块：读取数据
+-- 读取方块数据
 require("blockData")
+require("sequenceModule")
 local blocks=blockData.blocks
 local blockRowsFlag=blockData.blockRowsFlag
 local blockColsFlag=blockData.blockColsFlag
@@ -11,30 +12,35 @@ local kickWallTableMap=blockData.kickWallTableMap
 local initPos=blockData.initPos
 local blockColor=blockData.blockColor
 math.randomseed(os.time())
--- 场地：40 格高，但是有效区域为 20 格，field 从底下往上
+-- 场地为 40 格高，但是有效区域为 20 格，field 从底下往上
 local field= {}
 for i=1,40 do 
 	field[i]={0,0,0,0,0,0,0,0,0,0}
 end
 
--- 当前：方块的基本参数(位置朝向形状颜色)
-local curBlockId = math.random(7)
+-- 当前方块的基本参数(位置朝向形状颜色)
+local curBlockId = sequenceModule.popFront()
 local curBlockDir = 1;
 local curBlockColor = blockColor[curBlockId]
 local curBlockShp = blocks[curBlockId][curBlockDir]
 local curblockRowsFlag,curblockColsFlag = blockRowsFlag[curBlockId][curBlockDir],blockColsFlag[curBlockId][curBlockDir]
 local coorX ,coorY = initPos[curBlockId][1],initPos[curBlockId][2] 
 local blockSize = #curBlockShp
--- 当前：方块的状态参数(是否在地面、是否锁定)
+-- 当前方块的状态参数(是否在地面、是否锁定)
 local isGrounded=false
 local islocked=false
 
 -- 初始化计时
 local tm=0
--- 锁延：开始时间
+-- 锁延开始时间
 local lagStart=love.timer.getTime()
--- 锁延：操作计数
-local moveCount=15
+-- 锁延操作计数
+local moveCount=15	-- TODO：这个变量应当是可用一个常量设置的，而不是用数字设置
+
+-- 暂存操作计数
+local holdCount=1	-- TODO：这个变量应当是可用一个常量设置的，而不是用数字设置
+-- 暂存的方块类型
+local holdType=-1
 
 --[[函数]]--
 -- 修改当前方块参数
@@ -52,8 +58,10 @@ local function changeCurBlock(id,dir,pos)
 end
 
 -- 生成新方块 
-local function respawnBlock()
-	newId=math.random(7)
+local function respawnBlock(newId)
+	if newId==nil then
+		newId=sequenceModule.popFront()
+	end
 	changeCurBlock(newId,1,{initPos[newId][1],initPos[newId][2]})
 	isGrounded = false
 	islocked = false
@@ -155,7 +163,6 @@ local function resetLockLag()
 			lagStart=love.timer.getTime()
 			-- 计数减少
 			moveCount=moveCount-1
-			print(moveCount)
 		end
 	else
 		lagStart=love.timer.getTime()
@@ -164,6 +171,7 @@ end
 
 -- 锁定函数
 local function lockBlock()
+	holdCount=1
 	for i=1,blockSize do 
 		for j=1,blockSize do 
 			if curBlockShp[i][j]>0 then
@@ -245,10 +253,25 @@ function hardDrop()
 	repeat drop()until isGrounded==true
 	islocked =true
 end
+-- 方块暂存
+function hold()
+	if holdCount>0 then
+		if holdType==-1 then
+			holdType=curBlockId
+			respawnBlock()
+		else
+			local tmp=curBlockId
+			respawnBlock(holdType)
+			holdType=tmp
+		end
+		holdCount=holdCount-1
+	end
+end
 
 -- 方块按时间下降
 function dropByTimer()
 	--刷新下落计时器，每0.6秒执行一次drop
+	-- TODO：这个时长应当是可用一个常量设置的，而不是用数字设置
 	if love.timer.getTime()-tm>.6 then
 		drop()
 		tm=love.timer.getTime()
@@ -256,6 +279,7 @@ function dropByTimer()
 end
 -- 方块锁定完成消行与重新生成
 function lockEraseRespawn()
+	-- TODO：这个锁延时长应当是可用一个常量设置的，而不是用数字设置
 	if isGrounded==true and love.timer.getTime()-lagStart>1 or islocked then
 		lockBlock()
 		eraseLines()
@@ -292,6 +316,7 @@ end
 	rotate180()：			当前方块180旋
 	softDrop()：			当前方块软降
 	hardDrop()：			当前方块硬降
+	hold():					当前方块暂存
 	--
 	dropByTimer():			方块按时间下降
 	lockEraseRespawn():		方块锁定完成消行与重新生成
@@ -312,6 +337,7 @@ gameModule.rotateRCW=rotateRCW
 gameModule.rotate180=rotate180
 gameModule.softDrop=softDrop
 gameModule.hardDrop=hardDrop
+gameModule.hold=hold
 --
 gameModule.dropByTimer=dropByTimer
 gameModule.lockEraseRespawn=lockEraseRespawn

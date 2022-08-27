@@ -4,9 +4,6 @@ require("drawModule")
 
 --引擎工作函数
 function love.run()
-	local field=gameModule.getField()
-	local blockColor=gameModule.blockColor
-
 	--引擎工作循环
 	return function()
 		--引擎事件系统
@@ -32,6 +29,8 @@ function love.run()
 					gameModule.softDrop()
 				elseif k=="space"then--硬降
 					gameModule.hardDrop()
+				elseif k=="c"then--暂存
+					gameModule.hold()
 				end
 			end
 		end
@@ -43,9 +42,7 @@ function love.run()
 		gameModule.lockEraseRespawn()
 
 		-- 绘制
-		drawModule.drawField(field)
-		drawModule.drawBlock(gameModule.getCurBlockShp(),gameModule.getCurPos(),gameModule.getCurBlockColor())
-		love.graphics.present()	-- 输出到屏幕
+		drawModule.drawAll()
 	end
 end
 
