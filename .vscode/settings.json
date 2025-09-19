@@ -1,7 +1,0 @@
-{
-    "terminal.integrated.defaultProfile.windows": "PowerShell",
-    "pixelbyte.love2d.debug": true,
-    // "terminal.integrated.shellArgs.windows": ["/K chcp 65001 >nul"],
-
-
-}
