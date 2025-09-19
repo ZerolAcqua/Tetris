@@ -1,2 +1,5 @@
 *.love
 game
+node_modules
+.vscode
+out

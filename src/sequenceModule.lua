@@ -37,7 +37,7 @@ end
 -- 获取序列队首
 function popFront()
     updateSequence()
-    print(blockSequence[1])
+    -- print(blockSequence[1])
     return table.remove(blockSequence,1)
 end
 -- 获取序列
