@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "一个使用 LÖVE 2D 引擎开发的现代俄罗斯方块游戏",
   "scripts": {
-    "build": "npx love.js src out -c -m 134217728 -t \"俄罗斯方块\"",
+    "build": "npx love.js src out -c -m 134217728 -t \"Tεlr1s\"",
     "serve": "npx http-server out -p 8080",
     "dev": "npm run build && npm run serve",
     "clean": "rm -rf out"
