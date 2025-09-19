@@ -1,0 +1,1240 @@
+blockData={}
+
+--[[所有的方块数据]]--
+-- 记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+local blocks={
+	-- I
+	{
+		{{0,0,0,0},{0,0,0,0},{1,1,1,1},{0,0,0,0}},		--I1
+		{{0,0,1,0},{0,0,0,0},{0,0,0,0},{0,0,1,0}},		--I2
+		{{0,0,0,0},{1,1,0,1},{0,0,0,0},{0,0,0,0}},		--I3
+		{{0,1,0,0},{0,0,0,0},{0,0,0,0},{0,1,0,0}}		--I4
+	},	
+	-- J
+	{
+		{{0,0,0},{1,1,1},{1,0,0}},						--J1
+		{{0,1,0},{0,0,0},{0,1,1}},						--J2
+		{{0,0,1},{1,1,0},{0,0,0}},						--J3
+		{{1,1,0},{0,0,0},{0,1,0}}						--J4
+	},		
+	-- L
+	{
+		{{0,0,0},{1,1,1},{0,0,1}},						--L1
+		{{0,1,1},{0,0,0},{0,1,0}},						--L2
+		{{1,0,0},{0,1,1},{0,0,0}},						--L3
+		{{0,1,0},{0,1,0},{1,0,0}}						--L4
+	},
+	-- O	
+	{
+		{{1,1},{1,1}},									--O1
+		{{1,0},{1,1}},									--O2
+		{{1,0},{0,1}},									--O3
+		{{0,1},{1,1}}									--O4
+	},
+	-- S
+	{
+		{{0,0,0},{1,1,0},{0,1,1}},						--S1
+		{{0,0,1},{0,1,0},{0,1,0}},						--S2
+		{{1,0,0},{0,1,1},{0,0,0}},						--S3
+		{{0,1,0},{0,1,0},{1,0,0}}						--S4
+	},		
+	-- Z
+	{
+		{{0,0,0},{0,1,1},{1,1,0}},						--Z1
+		{{0,1,0},{0,0,1},{0,0,1}},						--Z2
+		{{0,1,1},{1,0,0},{0,0,0}},						--Z3
+		{{1,0,0},{1,0,0},{0,1,0}}						--Z4
+	},
+	-- T
+	{
+		{{0,0,0},{1,1,1},{0,1,0}},						--T1
+		{{0,1,0},{0,0,1},{0,1,0}},						--T2
+		{{0,1,0},{1,0,1},{0,0,0}},						--T3
+		{{0,1,0},{1,0,0},{0,1,0}}						--T4
+	}
+}
+-- 记录各方向方块在相应行列是否有小 mino,可以由 blocks 推出
+local blockRowsFlag={}
+local blockColsFlag={} 
+local function calRowColFlag()
+	for id=1,#blocks do	-- 每种方块
+		blockRowsFlag[id]={}
+		local blockSize=#blocks[id][1]
+		for dir=1,4 do	-- 每个方向
+			blockRowsFlag[id][dir]={}
+			for i=1,blockSize do -- 每行
+				blockRowsFlag[id][dir][i]=0
+				for j=1,blockSize do
+					if blocks[id][dir][i][j]>0 then
+						blockRowsFlag[id][dir][i]=1
+						break
+					end
+				end
+			end
+		end
+	end
+	for i=1,#blockRowsFlag do
+		blockColsFlag[i]={}
+		blockColsFlag[i][1]=blockRowsFlag[i][4]
+		blockColsFlag[i][2]=blockRowsFlag[i][1]
+		blockColsFlag[i][3]=blockRowsFlag[i][2]
+		blockColsFlag[i][4]=blockRowsFlag[i][3]
+	end
+end
+calRowColFlag()
+
+-- 踢墙表(JLSTZ相同一套，单独一套,O无踢墙)
+local kickWallTable={
+	-- I
+	{
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- 0->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- R->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}},		-- R->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- 2->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- 2->L
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- L->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- L->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}}		-- 0->L
+	},	
+	-- J
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- L
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- O	
+	{
+		{{0,0}},		-- 0->R
+		{{0,0}},		-- R->0
+		{{0,0}},		-- R->2
+		{{0,0}},		-- 2->R
+		{{0,0}},		-- 2->L
+		{{0,0}},		-- L->2
+		{{0,0}},		-- L->0
+		{{0,0}}			-- 0->L
+	},
+	-- S
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- Z
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- T
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	}
+}
+-- 踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+local kickWallTableMap={
+	{0,1,0,8},
+	{2,0,3,0},
+	{0,4,0,5},
+	{7,0,6,0},
+}
+-- 方块活动框左上角坐标 (x,y)
+local initPos={
+	{4,22},		-- I
+	{4,22},		-- J
+	{4,22},		-- L
+	{5,22},		-- O
+	{4,22},		-- S
+	{4,22},		-- Z
+	{4,22}		-- T
+}
+-- 方块颜色
+local blockColor={
+	{0,255,255},		-- I
+	{0,0,255},			-- J
+	{255,170,0},		-- L
+	{255,255,0},		-- O
+	{0,255,0},			-- S
+	{255,0,0},			-- Z
+	{153,0,255}			-- T
+}
+for i=1,#blockColor do
+	for j=1,3 do
+		blockColor[i][j]=blockColor[i][j]/255
+	end
+end
+
+--[[
+整合模块
+	blocks：			记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+	blockRowsFlag：		记录各方向方块在相应行是否有小 mino,可以由 blocks 推出
+	blockColsFlag：		记录各方向方块在相应列是否有小 mino,可以由 blocks 推出
+	
+	kickWallTable：		踢墙表(JLSTZ相同一套，单独一套,O无踢墙)		
+	kickWallTableMap：	踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+	
+	initPos：			方块活动框左上角坐标 (x,y)
+	blockColor：		方块颜色
+]]--
+blockData.blocks=blocks
+blockData.blockRowsFlag=blockRowsFlag
+blockData.blockColsFlag=blockColsFlag
+
+blockData.kickWallTable=kickWallTable
+blockData.kickWallTableMap=kickWallTableMap
+
+blockData.initPos=initPos
+blockData.blockColor=blockColor
+
+return blockDatablockData={}
+
+--[[所有的方块数据]]--
+-- 记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+local blocks={
+	-- I
+	{
+		{{0,0,0,0},{0,0,0,0},{1,1,1,1},{0,0,0,0}},		--I1
+		{{0,0,1,0},{0,0,1,0},{0,0,1,0},{0,0,1,0}},		--I2
+		{{0,0,0,0},{1,1,1,1},{0,0,0,0},{0,0,0,0}},		--I3
+		{{0,1,0,0},{0,1,0,0},{0,1,0,0},{0,1,0,0}}		--I4
+	},	
+	-- J
+	{
+		{{0,0,0},{1,1,1},{1,0,0}},						--J1
+		{{0,1,0},{0,1,0},{0,1,1}},						--J2
+		{{0,0,1},{1,1,1},{0,0,0}},						--J3
+		{{1,1,0},{0,1,0},{0,1,0}}						--J4
+	},		
+	-- L
+	{
+		{{0,0,0},{1,1,1},{0,0,1}},						--L1
+		{{0,1,1},{0,1,0},{0,1,0}},						--L2
+		{{1,0,0},{1,1,1},{0,0,0}},						--L3
+		{{0,1,0},{0,1,0},{1,1,0}}						--L4
+	},
+	-- O	
+	{
+		{{1,1},{1,1}},									--O1
+		{{1,1},{1,1}},									--O2
+		{{1,1},{1,1}},									--O3
+		{{1,1},{1,1}}									--O4
+	},
+	-- S
+	{
+		{{0,0,0},{1,1,0},{0,1,1}},						--S1
+		{{0,0,1},{0,1,1},{0,1,0}},						--S2
+		{{1,1,0},{0,1,1},{0,0,0}},						--S3
+		{{0,1,0},{1,1,0},{1,0,0}}						--S4
+	},		
+	-- Z
+	{
+		{{0,0,0},{0,1,1},{1,1,0}},						--Z1
+		{{0,1,0},{0,1,1},{0,0,1}},						--Z2
+		{{0,1,1},{1,1,0},{0,0,0}},						--Z3
+		{{1,0,0},{1,1,0},{0,1,0}}						--Z4
+	},
+	-- T
+	{
+		{{0,0,0},{1,1,1},{0,1,0}},						--T1
+		{{0,1,0},{0,1,1},{0,1,0}},						--T2
+		{{0,1,0},{1,1,1},{0,0,0}},						--T3
+		{{0,1,0},{1,1,0},{0,1,0}}						--T4
+	}
+}
+-- 记录各方向方块在相应行列是否有小 mino,可以由 blocks 推出
+local blockRowsFlag={}
+local blockColsFlag={} 
+local function calRowColFlag()
+	for id=1,#blocks do	-- 每种方块
+		blockRowsFlag[id]={}
+		local blockSize=#blocks[id][1]
+		for dir=1,4 do	-- 每个方向
+			blockRowsFlag[id][dir]={}
+			for i=1,blockSize do -- 每行
+				blockRowsFlag[id][dir][i]=0
+				for j=1,blockSize do
+					if blocks[id][dir][i][j]>0 then
+						blockRowsFlag[id][dir][i]=1
+						break
+					end
+				end
+			end
+		end
+	end
+	for i=1,#blockRowsFlag do
+		blockColsFlag[i]={}
+		blockColsFlag[i][1]=blockRowsFlag[i][4]
+		blockColsFlag[i][2]=blockRowsFlag[i][1]
+		blockColsFlag[i][3]=blockRowsFlag[i][2]
+		blockColsFlag[i][4]=blockRowsFlag[i][3]
+	end
+end
+calRowColFlag()
+
+-- 踢墙表(JLSTZ相同一套，单独一套,O无踢墙)
+local kickWallTable={
+	-- I
+	{
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- 0->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- R->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}},		-- R->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- 2->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- 2->L
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- L->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- L->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}}		-- 0->L
+	},	
+	-- J
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- L
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- O	
+	{
+		{{0,0}},		-- 0->R
+		{{0,0}},		-- R->0
+		{{0,0}},		-- R->2
+		{{0,0}},		-- 2->R
+		{{0,0}},		-- 2->L
+		{{0,0}},		-- L->2
+		{{0,0}},		-- L->0
+		{{0,0}}			-- 0->L
+	},
+	-- S
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- Z
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- T
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	}
+}
+-- 踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+local kickWallTableMap={
+	{0,1,0,8},
+	{2,0,3,0},
+	{0,4,0,5},
+	{7,0,6,0},
+}
+-- 方块活动框左上角坐标 (x,y)
+local initPos={
+	{4,22},		-- I
+	{4,22},		-- J
+	{4,22},		-- L
+	{5,22},		-- O
+	{4,22},		-- S
+	{4,22},		-- Z
+	{4,22}		-- T
+}
+-- 方块颜色
+local blockColor={
+	{0,255,255},		-- I
+	{0,0,255},			-- J
+	{255,170,0},		-- L
+	{255,255,0},		-- O
+	{0,255,0},			-- S
+	{255,0,0},			-- Z
+	{153,0,255}			-- T
+}
+for i=1,#blockColor do
+	for j=1,3 do
+		blockColor[i][j]=blockColor[i][j]/255
+	end
+end
+
+--[[
+整合模块
+	blocks：			记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+	blockRowsFlag：		记录各方向方块在相应行是否有小 mino,可以由 blocks 推出
+	blockColsFlag：		记录各方向方块在相应列是否有小 mino,可以由 blocks 推出
+	
+	kickWallTable：		踢墙表(JLSTZ相同一套，单独一套,O无踢墙)		
+	kickWallTableMap：	踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+	
+	initPos：			方块活动框左上角坐标 (x,y)
+	blockColor：		方块颜色
+]]--
+blockData.blocks=blocks
+blockData.blockRowsFlag=blockRowsFlag
+blockData.blockColsFlag=blockColsFlag
+
+blockData.kickWallTable=kickWallTable
+blockData.kickWallTableMap=kickWallTableMap
+
+blockData.initPos=initPos
+blockData.blockColor=blockColor
+
+return blockDatablockData={}
+
+--[[所有的方块数据]]--
+-- 记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+local blocks={
+	-- I
+	{
+		{{0,0,0,0},{0,0,0,0},{1,1,1,1},{0,0,0,0}},		--I1
+		{{0,0,1,0},{0,0,0,0},{0,0,0,0},{0,0,1,0}},		--I2
+		{{0,0,0,0},{1,1,0,1},{0,0,0,0},{0,0,0,0}},		--I3
+		{{0,1,0,0},{0,0,0,0},{0,0,0,0},{0,1,0,0}}		--I4
+	},	
+	-- J
+	{
+		{{0,0,0},{1,1,1},{1,0,0}},						--J1
+		{{0,1,0},{0,0,0},{0,1,1}},						--J2
+		{{0,0,1},{1,1,0},{0,0,0}},						--J3
+		{{1,1,0},{0,0,0},{0,1,0}}						--J4
+	},		
+	-- L
+	{
+		{{0,0,0},{1,1,1},{0,0,1}},						--L1
+		{{0,1,1},{0,0,0},{0,1,0}},						--L2
+		{{1,0,0},{0,1,1},{0,0,0}},						--L3
+		{{0,1,0},{0,1,0},{1,0,0}}						--L4
+	},
+	-- O	
+	{
+		{{1,1},{1,1}},									--O1
+		{{1,0},{1,1}},									--O2
+		{{1,0},{0,1}},									--O3
+		{{0,1},{1,1}}									--O4
+	},
+	-- S
+	{
+		{{0,0,0},{1,1,0},{0,1,1}},						--S1
+		{{0,0,1},{0,1,0},{0,1,0}},						--S2
+		{{1,0,0},{0,1,1},{0,0,0}},						--S3
+		{{0,1,0},{0,1,0},{1,0,0}}						--S4
+	},		
+	-- Z
+	{
+		{{0,0,0},{0,1,1},{1,1,0}},						--Z1
+		{{0,1,0},{0,0,1},{0,0,1}},						--Z2
+		{{0,1,1},{1,0,0},{0,0,0}},						--Z3
+		{{1,0,0},{1,0,0},{0,1,0}}						--Z4
+	},
+	-- T
+	{
+		{{0,0,0},{1,1,1},{0,1,0}},						--T1
+		{{0,1,0},{0,0,1},{0,1,0}},						--T2
+		{{0,1,0},{1,0,1},{0,0,0}},						--T3
+		{{0,1,0},{1,0,0},{0,1,0}}						--T4
+	}
+}
+-- 记录各方向方块在相应行列是否有小 mino,可以由 blocks 推出
+local blockRowsFlag={}
+local blockColsFlag={} 
+local function calRowColFlag()
+	for id=1,#blocks do	-- 每种方块
+		blockRowsFlag[id]={}
+		local blockSize=#blocks[id][1]
+		for dir=1,4 do	-- 每个方向
+			blockRowsFlag[id][dir]={}
+			for i=1,blockSize do -- 每行
+				blockRowsFlag[id][dir][i]=0
+				for j=1,blockSize do
+					if blocks[id][dir][i][j]>0 then
+						blockRowsFlag[id][dir][i]=1
+						break
+					end
+				end
+			end
+		end
+	end
+	for i=1,#blockRowsFlag do
+		blockColsFlag[i]={}
+		blockColsFlag[i][1]=blockRowsFlag[i][4]
+		blockColsFlag[i][2]=blockRowsFlag[i][1]
+		blockColsFlag[i][3]=blockRowsFlag[i][2]
+		blockColsFlag[i][4]=blockRowsFlag[i][3]
+	end
+end
+calRowColFlag()
+
+-- 踢墙表(JLSTZ相同一套，单独一套,O无踢墙)
+local kickWallTable={
+	-- I
+	{
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- 0->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- R->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}},		-- R->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- 2->R
+		{{0,0},{ 2,0},{-1,0},{ 2, 1},{-1,-2}},		-- 2->L
+		{{0,0},{-2,0},{ 1,0},{-2,-1},{ 1, 2}},		-- L->2
+		{{0,0},{ 1,0},{-2,0},{ 1,-2},{-2, 1}},		-- L->0
+		{{0,0},{-1,0},{ 2,0},{-1, 2},{ 2,-1}}		-- 0->L
+	},	
+	-- J
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- L
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- O	
+	{
+		{{0,0}},		-- 0->R
+		{{0,0}},		-- R->0
+		{{0,0}},		-- R->2
+		{{0,0}},		-- 2->R
+		{{0,0}},		-- 2->L
+		{{0,0}},		-- L->2
+		{{0,0}},		-- L->0
+		{{0,0}}			-- 0->L
+	},
+	-- S
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},		
+	-- Z
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	},
+	-- T
+	{
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 0->R
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->0
+		{{0,0},{ 1,0},{ 1,-1},{0, 2},{ 1, 2}},		-- R->2
+		{{0,0},{-1,0},{-1, 1},{0,-2},{-1,-2}},		-- 2->R
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}},		-- 2->L
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->2
+		{{0,0},{-1,0},{-1,-1},{0, 2},{-1, 2}},		-- L->0
+		{{0,0},{ 1,0},{ 1, 1},{0,-2},{ 1,-2}}		-- 0->L
+	}
+}
+-- 踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+local kickWallTableMap={
+	{0,1,0,8},
+	{2,0,3,0},
+	{0,4,0,5},
+	{7,0,6,0},
+}
+-- 方块活动框左上角坐标 (x,y)
+local initPos={
+	{4,22},		-- I
+	{4,22},		-- J
+	{4,22},		-- L
+	{5,22},		-- O
+	{4,22},		-- S
+	{4,22},		-- Z
+	{4,22}		-- T
+}
+-- 方块颜色
+local blockColor={
+	{0,255,255},		-- I
+	{0,0,255},			-- J
+	{255,170,0},		-- L
+	{255,255,0},		-- O
+	{0,255,0},			-- S
+	{255,0,0},			-- Z
+	{153,0,255}			-- T
+}
+for i=1,#blockColor do
+	for j=1,3 do
+		blockColor[i][j]=blockColor[i][j]/255
+	end
+end
+
+--[[
+整合模块
+	blocks：			记录的各方向的方块形状(从下往上)：1-原位(0) 2-顺时针位(R) 3-180度位(2) 4-逆时针位(L)
+	blockRowsFlag：		记录各方向方块在相应行是否有小 mino,可以由 blocks 推出
+	blockColsFlag：		记录各方向方块在相应列是否有小 mino,可以由 blocks 推出
+	
+	kickWallTable：		踢墙表(JLSTZ相同一套，单独一套,O无踢墙)		
+	kickWallTableMap：	踢墙表映射，由起止的方向获得索引 [a][b]=>index,index=0 意为没有映射
+	
+	initPos：			方块活动框左上角坐标 (x,y)
+	blockColor：		方块颜色
+]]--
+blockData.blocks=blocks
+blockData.blockRowsFlag=blockRowsFlag
+blockData.blockColsFlag=blockColsFlag
+
+blockData.kickWallTable=kickWallTable
+blockData.kickWallTableMap=kickWallTableMap
+
+blockData.initPos=initPos
+blockData.blockColor=blockColor
+
+return blockDatafunction love.conf(t)
+	local W=t.window
+	W.title="俄罗斯方块"
+	W.width,W.height=600,800
+	W.resizable=false
+
+	local M=t.modules
+	M.audio=false
+	M.data=false
+	M.image=false
+	M.joystick=false
+	M.math=false
+	M.mouse=false
+	M.physics=false
+	M.sound=false
+	M.thread=false
+	M.touch=false
+	M.video=false
+end
+drawModule={}
+
+--[[数据&初始化]]--
+-- 读取方块数据
+require("blockData")
+local blockColor=blockData.blockColor
+local blocks=blockData.blocks
+-- 读取游戏运行数据
+require("gameModule")
+-- 序列数据
+require("sequenceModule")
+
+--[[函数]]--
+
+
+--绘制场地
+local function drawField(field)
+    love.graphics.clear(1,1,1)
+    for y=1,20 do for x=1,10 do if field[y][x]>0 then
+        local tempColor=blockColor[field[y][x]]
+        love.graphics.setColor(tempColor[1],tempColor[2],tempColor[3])
+        love.graphics.rectangle("fill",40*x-39,801-40*y,38,38)
+    end end end
+end
+
+-- 绘制方块
+local function drawBlock(curBlockShp,pos,curBlockColor)
+    local coorX,coorY=pos[1],pos[2]
+    local blockSize=#curBlockShp
+
+    love.graphics.setColor(curBlockColor[1],curBlockColor[2],curBlockColor[3])
+    for y=1,#curBlockShp do for x=1,#curBlockShp[1]do if curBlockShp[y][x]==1 then
+        love.graphics.rectangle("fill",40*(x+coorX-1)-39,801-40*(y+coorY-blockSize),38,38)
+    end end end
+end
+
+-- 绘制预览序列
+local function drawNext(sequence)
+    love.graphics.setColor(0,0,0)
+    love.graphics.line(400,0,400,800)
+
+    local id
+    local oneBlockColor
+    local blockShp
+    local blockSize
+    for i=1,sequenceModule.nextNum do
+        id=sequence[i]
+        oneBlockColor=blockColor[id]
+        blockShp=blocks[id][1]
+        blockSize=#blockShp
+        X=430
+        Y=i*100-70
+        love.graphics.setColor(oneBlockColor[1],oneBlockColor[2],oneBlockColor[3])
+        for y=1,#blockShp do for x=1,#blockShp[1]do if blockShp[y][x]==1 then
+            love.graphics.rectangle("fill",40*(x-1)+X,40*(blockSize-y)+Y,38,38)
+        end end end
+    end
+end
+-- 绘制暂存块
+local function drawHold(holdType)
+    love.graphics.setColor(0,0,0)
+    love.graphics.line(400,590,600,590)
+    if holdType>0 then
+        local id=holdType
+        local oneBlockColor=blockColor[id]
+        local blockShp=blocks[id][1]
+        local blockSize=#blockShp
+
+        X=430
+        Y=650
+        love.graphics.setColor(oneBlockColor[1],oneBlockColor[2],oneBlockColor[3])
+        for y=1,#blockShp do for x=1,#blockShp[1]do if blockShp[y][x]==1 then
+            love.graphics.rectangle("fill",40*(x-1)+X,40*(blockSize-y)+Y,38,38)
+        end end end
+    end
+end
+
+-- 绘制全部
+function drawAll()
+    drawField(gameModule.getField())
+    drawBlock(gameModule.getCurBlockShp(),gameModule.getCurPos(),gameModule.getCurBlockColor())
+    drawNext(sequenceModule.getSequence())
+    drawHold(gameModule.getHoldType())
+    love.graphics.present()	-- 输出到屏幕
+end
+
+--[[
+整合模块
+	----
+	drawAll()：			    进行绘制
+]]--
+
+drawModule.drawAll=drawAll
+
+return drawModulegameModule={}
+
+--[[数据&初始化]]--
+-- 读取方块数据
+require("blockData")
+require("sequenceModule")
+local blocks=blockData.blocks
+local blockRowsFlag=blockData.blockRowsFlag
+local blockColsFlag=blockData.blockColsFlag
+local kickWallTable=blockData.kickWallTable
+local kickWallTableMap=blockData.kickWallTableMap
+local initPos=blockData.initPos
+local blockColor=blockData.blockColor
+math.randomseed(os.time())
+-- 场地为 40 格高，但是有效区域为 20 格，field 从底下往上
+local field= {}
+for i=1,40 do 
+	field[i]={0,0,0,0,0,0,0,0,0,0}
+end
+
+-- 当前方块的基本参数(位置朝向形状颜色)
+local curBlockId = sequenceModule.popFront()
+local curBlockDir = 1;
+local curBlockColor = blockColor[curBlockId]
+local curBlockShp = blocks[curBlockId][curBlockDir]
+local curblockRowsFlag,curblockColsFlag = blockRowsFlag[curBlockId][curBlockDir],blockColsFlag[curBlockId][curBlockDir]
+local coorX ,coorY = initPos[curBlockId][1],initPos[curBlockId][2] 
+local blockSize = #curBlockShp
+-- 当前方块的状态参数(是否在地面、是否锁定)
+local isGrounded=false
+local islocked=false
+
+-- 初始化计时
+local tm=0
+-- 锁延开始时间
+local lagStart=love.timer.getTime()
+-- 锁延操作计数
+local moveCount=15	-- TODO：这个变量应当是可用一个常量设置的，而不是用数字设置
+
+-- 暂存操作计数
+local holdCount=1	-- TODO：这个变量应当是可用一个常量设置的，而不是用数字设置
+-- 暂存的方块类型
+local holdType=-1
+
+--[[函数]]--
+-- 修改当前方块参数
+local function changeCurBlock(id,dir,pos)
+	-- 修改方块的类型方向与位置
+	curBlockId=id
+	curBlockDir=dir
+	curBlockColor = blockColor[curBlockId]
+	curBlockShp = blocks[curBlockId][curBlockDir]
+	curblockRowsFlag,curblockColsFlag = blockRowsFlag[curBlockId][curBlockDir],blockColsFlag[curBlockId][curBlockDir]
+	blockSize = #curBlockShp
+	if type(pos)=='table' then
+		coorX ,coorY =pos[1],pos[2]
+	end
+end
+
+-- 生成新方块 
+local function respawnBlock(newId)
+	if newId==nil then
+		newId=sequenceModule.popFront()
+	end
+	changeCurBlock(newId,1,{initPos[newId][1],initPos[newId][2]})
+	isGrounded = false
+	islocked = false
+	lagStart=love.timer.getTime()
+	moveCount=15
+end
+
+-- 检测当前方块，在左上角坐标为(x,y)时是否超出场地或与地面有重叠
+local function ifOverlap(id,dir,x,y)
+	local tmpBlockShp = blocks[id][dir]
+	local tmpBlockRowsFlag,tmpBlockColsFlag = blockRowsFlag[id][dir],blockColsFlag[id][dir]
+	local tmpBlockSize = #tmpBlockShp
+	-- 是否超出场地左边界
+	for i=1,tmpBlockSize do 
+		if tmpBlockColsFlag[i]>0 then
+			if x+i-1<1 then 
+				return true
+			else
+				break
+			end
+		end
+	end
+	-- 是否超出场地右边界
+	for i=tmpBlockSize,1,-1 do 
+		if tmpBlockColsFlag[i]>0 then
+			if x+i-1>10 then 
+				return true
+			else
+				break
+			end
+		end
+	end
+	-- 是否超出场地底部
+	for i=1,tmpBlockSize do 
+		if tmpBlockRowsFlag[i]>0 then
+			if y-tmpBlockSize+i<=0 then
+				return true	-- 超出场地底部
+			end
+			for j=1,tmpBlockSize do
+				if tmpBlockShp[i][j]>0 and field[y-tmpBlockSize+i][x+j-1]>0 then
+					return true
+				end
+			end
+		end 
+	end
+	return false
+end
+
+-- 检测方块是否落地
+local function ifOnGround()
+	return ifOverlap(curBlockId,curBlockDir,coorX,coorY-1)
+end
+
+--方块下落
+local function drop()
+	isGrounded=ifOnGround()
+	if isGrounded==false then
+		coorY=coorY-1
+	end
+end
+
+-- 踢墙函数
+local function kickWall(newDir)
+	local index=kickWallTableMap[curBlockDir][newDir]
+
+	if index==0 then	-- 无对应踢墙表
+		if not ifOverlap(curBlockId,newDir,coorX,coorY) then
+			changeCurBlock(curBlockId,newDir)
+			return true
+		end
+	else
+		local kickWallSeq = kickWallTable[curBlockId][index]
+		local dX,dY
+		if moveCount>0 then
+			for i=1,#kickWallSeq do
+				dX,dY=kickWallSeq[i][1],kickWallSeq[i][2]
+				if not ifOverlap(curBlockId,newDir,coorX+dX,coorY+dY) then
+					changeCurBlock(curBlockId,newDir,{coorX+dX,coorY+dY})
+					return true
+				end
+			end
+		else
+			for i=1,#kickWallSeq do
+				dX,dY=kickWallSeq[i][1],kickWallSeq[i][2]
+				if not ifOverlap(curBlockId,newDir,coorX+kickWallSeq[i][1],coorY+kickWallSeq[i][2]) and dY<=0 then
+					changeCurBlock(curBlockId,newDir,{coorX+kickWallSeq[i][1],coorY+kickWallSeq[i][2]})
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+-- 因操作造成的重置锁延
+local function resetLockLag()
+	if isGrounded then
+		if moveCount>0 then
+			lagStart=love.timer.getTime()
+			-- 计数减少
+			moveCount=moveCount-1
+		end
+	else
+		lagStart=love.timer.getTime()
+	end
+end
+
+-- 锁定函数
+local function lockBlock()
+	holdCount=1
+	for i=1,blockSize do 
+		for j=1,blockSize do 
+			if curBlockShp[i][j]>0 then
+				field[coorY-blockSize+i][coorX+j-1]=curBlockId
+			end 
+		end 
+	end
+end
+
+-- 消行函数
+local function eraseLines()
+	-- 检测消行
+	for i=blockSize,1,-1 do
+		local ct=0
+		if curblockRowsFlag[i]>0 then
+			for j=1,10 do
+				if field[coorY-blockSize+i][j]>0
+				then ct=ct+1
+				end
+			end
+			if ct==10 then
+				table.remove(field,coorY-blockSize+i)
+				table.insert(field,{0,0,0,0,0,0,0,0,0,0})
+			end
+		end
+	end
+end
+
+-- 方块左移
+function moveLeft()
+	if not ifOverlap(curBlockId,curBlockDir,coorX-1,coorY)then
+		resetLockLag()
+
+		-- 移动
+		coorX=coorX-1
+		isGrounded=ifOnGround()
+	end	
+end
+-- 方块右移
+function moveRight()
+	if not ifOverlap(curBlockId,curBlockDir,coorX+1,coorY)then
+		resetLockLag()
+		-- 移动						
+		coorX=coorX+1
+		isGrounded=ifOnGround()					
+	end
+end
+-- 方块左旋逆时针
+function rotateLCCW()
+	local newDir = (curBlockDir-1 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end
+end
+-- 方块右旋顺时针
+function rotateRCW()
+	local newDir = (curBlockDir+1 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end
+end
+-- 方块180度旋转
+function rotate180()
+	local newDir = (curBlockDir+2 -1)%4+1
+	if kickWall(newDir)then -- 在这里完成旋转
+		resetLockLag()
+		isGrounded=ifOnGround()
+	end		
+end
+-- 方块软降
+function softDrop()
+	repeat drop()until isGrounded==true
+	resetLockLag()
+end
+-- 方块硬降
+function hardDrop()
+	repeat drop()until isGrounded==true
+	islocked =true
+end
+-- 方块暂存
+function hold()
+	if holdCount>0 then
+		if holdType==-1 then
+			holdType=curBlockId
+			respawnBlock()
+		else
+			local tmp=curBlockId
+			respawnBlock(holdType)
+			holdType=tmp
+		end
+		holdCount=holdCount-1
+	end
+end
+
+-- 方块按时间下降
+function dropByTimer()
+	--刷新下落计时器，每0.6秒执行一次drop
+	-- TODO：这个时长应当是可用一个常量设置的，而不是用数字设置
+	if love.timer.getTime()-tm>.6 then
+		drop()
+		tm=love.timer.getTime()
+	end
+end
+-- 方块锁定完成消行与重新生成
+function lockEraseRespawn()
+	-- TODO：这个锁延时长应当是可用一个常量设置的，而不是用数字设置
+	if isGrounded==true and love.timer.getTime()-lagStart>1 or islocked then
+		lockBlock()
+		eraseLines()
+		respawnBlock()
+	end
+end
+
+-- 获取场地数据
+function getField()
+	return field
+end
+-- 获取当前方块形状
+function getCurBlockShp()
+	return curBlockShp
+end
+-- 获取当前方块颜色
+function getCurBlockColor()
+	return curBlockColor
+end
+-- 获取当前方块位置
+function getCurPos()
+	return {coorX,coorY}
+end
+-- 获取 Hold 的方块类型
+function getHoldType()
+	return holdType	
+end
+
+--[[
+整合模块
+	blockColor：			颜色对应表
+	----
+	moveLeft()：			当前方块向左移动
+	moveRight()：			当前方块向右移动
+	rotateLCCW()：			当前方块左旋
+	rotateRCW()：			当前方块右旋
+	rotate180()：			当前方块180旋
+	softDrop()：			当前方块软降
+	hardDrop()：			当前方块硬降
+	hold():					当前方块暂存
+	--
+	dropByTimer():			方块按时间下降
+	lockEraseRespawn():		方块锁定完成消行与重新生成
+	--
+	getField：				获取场地数据
+	getCurBlockShp：		获取当前方块形状
+	getCurBlockColor：		获取当前方块颜色
+	getCurPos：				获取当前方块位置
+	getHoldType				获取 Hold 的方块类型
+
+	
+]]--
+
+gameModule.blockColor=blockColor
+----
+gameModule.moveLeft=moveLeft
+gameModule.moveRight=moveRight
+gameModule.rotateLCCW=rotateLCCW
+gameModule.rotateRCW=rotateRCW
+gameModule.rotate180=rotate180
+gameModule.softDrop=softDrop
+gameModule.hardDrop=hardDrop
+gameModule.hold=hold
+--
+gameModule.dropByTimer=dropByTimer
+gameModule.lockEraseRespawn=lockEraseRespawn
+--
+gameModule.getField=getField
+gameModule.getCurBlockShp=getCurBlockShp
+gameModule.getCurBlockColor=getCurBlockColor
+gameModule.getCurPos=getCurPos
+gameModule.getHoldType=getHoldType
+
+return gameModule--[[数据&初始化]]--，
+require("gameModule")
+require("drawModule")
+
+--引擎工作函数
+function love.run()
+	--引擎工作循环
+	return function()
+		--引擎事件系统
+		love.event.pump()
+		for name,k in love.event.poll()do
+			if name=="quit"then
+				--程序退出
+				return true
+			elseif name=="keypressed"then--玩家按键
+				if  k=="escape"then
+					return true
+				elseif k=="left"then--左移
+					gameModule.moveLeft()
+				elseif k=="right"then--右移
+					gameModule.moveRight()
+				elseif k=="z"then--逆时针旋转
+					gameModule.rotateLCCW()
+				elseif k=="x"then--顺时针旋转
+					gameModule.rotateRCW()
+				elseif k=="a"then--180度旋转
+					gameModule.rotate180()			
+				elseif k=="down"then--软降到底
+					gameModule.softDrop()
+				elseif k=="space"then--硬降
+					gameModule.hardDrop()
+				elseif k=="c"then--暂存
+					gameModule.hold()
+				end
+			end
+		end
+
+		-- 方块计时下落
+		gameModule.dropByTimer()
+
+		-- 锁延后锁定
+		gameModule.lockEraseRespawn()
+
+		-- 绘制
+		drawModule.drawAll()
+	end
+end
+
+sequenceModule={}
+
+--[[数据&初始化]]--
+require("blockData")
+local blockSequence={}
+local nextNum=5
+local blockNum=#blockData.blocks
+
+--[[函数]]--
+-- bag 随机出块
+local function bag()
+    local SortedSequence={}
+    local temp={}
+    for i=1,blockNum do 
+        SortedSequence[i]=i
+    end
+    while #SortedSequence~=0 do
+        local n=math.random(0, #SortedSequence)
+        table.insert(temp,SortedSequence[n])
+        table.remove(SortedSequence,n)
+    end
+    return temp
+end
+-- 按随机器向序列后添加序列
+local function addSequence(randomizer)
+    local temp=randomizer()
+    for i=1,#temp do
+        table.insert(blockSequence,temp[i])
+    end
+end
+-- 更新序列
+function updateSequence()
+    if #blockSequence<nextNum then
+        addSequence(bag)
+    end
+end
+-- 获取序列队首
+function popFront()
+    updateSequence()
+    -- print(blockSequence[1])
+    return table.remove(blockSequence,1)
+end
+-- 获取序列
+function getSequence()
+    updateSequence()
+    return blockSequence
+end
+
+
+--[[
+整合模块
+    nextNum：               预览数目
+	----
+	updateSequence()：		进行绘制
+    popFront()：            获取序列队首
+    getSequence()：         获取序列
+]]--
+sequenceModule.nextNum=nextNum
+----
+sequenceModule.updateSequence=updateSequence
+sequenceModule.popFront=popFront
+sequenceModule.getSequence=getSequence
+
+return sequenceModule
